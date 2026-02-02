@@ -1,0 +1,122 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+    networks:
+      - fx-network
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - ./src:/var/www/src
+      - ./public:/var/www/html
+      - ./logs:/var/www/logs
+      - ./vendor:/var/www/vendor
+      - ./.env:/var/www/.env
+      - ./bin:/var/www/bin
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fx-network
+    environment:
+      - DB_HOST=db
+      - DB_NAME=fx_platform
+      - DB_USER=fx_user
+      - DB_PASS=fx_password
+    command: sh -c "composer install --no-interaction && chmod +x /var/www/bin/init.sh && sh /var/www/bin/init.sh && php-fpm -F"
+
+  websocket-prices:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: sh -c "while [ ! -f /var/www/vendor/autoload.php ]; do echo 'Esperando composer install...'; sleep 2; done && php /var/www/src/Infrastructure/WebSocket/PriceServer.php"
+    volumes:
+      - ./src:/var/www/src
+      - ./logs:/var/www/logs
+      - ./vendor:/var/www/vendor
+      - ./.env:/var/www/.env
+    depends_on:
+      - db
+      - php
+    ports:
+      - "8081:8081"
+    networks:
+      - fx-network
+    environment:
+      - DB_HOST=db
+      - DB_NAME=fx_platform
+      - DB_USER=fx_user
+      - DB_PASS=fx_password
+
+  websocket-config:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: sh -c "while [ ! -f /var/www/vendor/autoload.php ]; do echo 'Esperando composer install...'; sleep 2; done && php /var/www/src/Infrastructure/WebSocket/ConfigServer.php"
+    volumes:
+      - ./src:/var/www/src
+      - ./logs:/var/www/logs
+      - ./vendor:/var/www/vendor
+      - ./.env:/var/www/.env
+    depends_on:
+      - db
+      - php
+    ports:
+      - "8082:8082"
+    networks:
+      - fx-network
+    environment:
+      - DB_HOST=db
+      - DB_NAME=fx_platform
+      - DB_USER=fx_user
+      - DB_PASS=fx_password
+
+  price-generator:
+    build:
+      context: .
+      dockerfile: docker/python/Dockerfile
+    volumes:
+      - ./scripts/price_generator:/app
+    ports:
+      - "5000:5000"
+    networks:
+      - fx-network
+    command: python /app/generator.py
+
+  db:
+    image: mariadb:10.11
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=fx_platform
+      - MYSQL_USER=fx_user
+      - MYSQL_PASSWORD=fx_password
+    networks:
+      - fx-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  db_data:
+
+networks:
+  fx-network:
+    driver: bridge

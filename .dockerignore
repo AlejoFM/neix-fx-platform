@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Logs
+logs/
+*.log
+
+# Dependencies (se instalan en el contenedor)
+vendor/
+node_modules/
+
+# Tests
+tests/
+phpunit.xml
+.phpunit.cache
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.cache
