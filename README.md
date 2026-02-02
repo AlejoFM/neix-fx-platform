@@ -112,15 +112,3 @@ Los logs se encuentran en `logs/` organizados por contexto:
 ## Documentación Adicional
 
 Ver [ARCHITECTURE.md](./ARCHITECTURE.md) para detalles arquitectónicos completos.
-
-## Desarrollo
-
-### Estructura de commits
-- `feat:` Nueva funcionalidad
-- `fix:` Corrección de bugs
-- `refactor:` Refactorización
-- `test:` Tests
-- `docs:` Documentación
-
-## Licencia
-Proyecto de prueba técnica - NEIX Challenge
